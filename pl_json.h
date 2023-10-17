@@ -959,7 +959,7 @@ pl_json_member_by_name(plJsonObject* tPtrJson, const char* pcName)
 
     for(uint32_t i = 0; i < tPtrJson->uChildCount; i++)
     {
-        if(strncmp(pcName, tPtrJson->sbtChildren[i].acName, strlen(pcName)) == 0)
+        if(strncmp(pcName, tPtrJson->sbtChildren[i].acName, strlen(tPtrJson->sbtChildren[i].acName)) == 0)
             return &tPtrJson->sbtChildren[i];
     }
 
