@@ -12,8 +12,8 @@
 */
 
 // library version
-#define PL_LOG_VERSION    "0.5.1"
-#define PL_LOG_VERSION_NUM 00501
+#define PL_LOG_VERSION    "0.5.2"
+#define PL_LOG_VERSION_NUM 00502
 
 /*
 Index of this file:
@@ -863,6 +863,7 @@ pl__get_log_channels(uint32_t* puChannelCount)
             ptEntry->uOffset = tPChannel->uBufferSize; \
             char* cPDest = &tPChannel->pcBuffer0[tPChannel->uBufferSize + tPChannel->uBufferCapacity * (ptEntry->uGeneration % 2)]; \
             ptEntry->uLevel = level; \
+            tPChannel->uBufferSize += szNewSize; \
             strcpy(cPDest, prefix); \
             cPDest += prefixSize; \
             strcpy(cPDest, pcMessage); \
