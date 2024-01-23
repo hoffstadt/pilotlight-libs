@@ -83,11 +83,11 @@ bool pl_test_expect_string_not_equal(const char* pcValue0, const char* pcValue1,
 
 // math
 #ifdef PL_MATH_DEFINED
-bool pl_test_expect_vec2_equal(plVec2 v1, plVec2 v2, const char* pcMsg);
-bool pl_test_expect_vec3_equal(plVec3 v1, plVec3 v2, const char* pcMsg);
-bool pl_test_expect_vec4_equal(plVec4 v1, plVec4 v2, const char* pcMsg);
-bool pl_test_expect_mat4_equal(plMat4 m1, plMat4 v2, const char* pcMsg);
-bool pl_test_expect_rect_equal(plRect r1, plRect r2, const char* pcMsg);
+bool pl_test_expect_vec2_near_equal(plVec2 v1, plVec2 v2, float fError, const char* pcMsg);
+bool pl_test_expect_vec3_near_equal(plVec3 v1, plVec3 v2, float fError, const char* pcMsg);
+bool pl_test_expect_vec4_near_equal(plVec4 v1, plVec4 v2, float fError, const char* pcMsg);
+bool pl_test_expect_mat4_near_equal(plMat4 m1, plMat4 v2, float fError, const char* pcMsg);
+bool pl_test_expect_rect_near_equal(plRect r1, plRect r2, float fError, const char* pcMsg);
 #endif
 
 #endif // PL_TEST_H
@@ -383,8 +383,10 @@ pl_test_expect_string_not_equal(const char* pcValue0, const char* pcValue1, cons
 }
 
 #ifdef PL_MATH_DEFINED
-bool pl_test_expect_vec2_equal(plVec2 v1, plVec2 v2, const char* pcMsg){
-    if(v1.d[0] == v2.d[0] && v1.d[1] && v2.d[1]){
+bool pl_float_near_equal(float fValue0, float fValue1, float fError) { return fValue0 >= fValue1 - fError && fValue0 <= fValue1 + fError; }
+
+bool pl_test_expect_vec2_near_equal(plVec2 v1, plVec2 v2, float fError, const char* pcMsg){
+    if(pl_float_near_equal(v1.d[0], v2.d[0], fError) && pl_float_near_equal(v1.d[1], v2.d[1], fError)) {
         pl__test_print_green("(%.6f, %.6f) equals (%.6f, %.6f) | Equality Expected", pcMsg, v1.d[0], v1.d[1], v2.d[0], v2.d[1]);
         return true;
     }
@@ -393,8 +395,8 @@ bool pl_test_expect_vec2_equal(plVec2 v1, plVec2 v2, const char* pcMsg){
     gptTestContext->ptCurrentTest->bFailureOccured = true;
     return false;
 }
-bool pl_test_expect_vec3_equal(plVec3 v1, plVec3 v2, const char* pcMsg){
-    if(v1.d[0] == v2.d[0] && v1.d[1] == v2.d[1] && v1.d[2] == v2.d[2]){
+bool pl_test_expect_vec3_near_equal(plVec3 v1, plVec3 v2, float fError, const char* pcMsg){
+    if(pl_float_near_equal(v1.d[0], v2.d[0], fError) && pl_float_near_equal(v1.d[1], v2.d[1], fError) && pl_float_near_equal(v1.d[2], v2.d[2], fError)){
         pl__test_print_green("(%.6f, %.6f, %.6f) equals (%.6f, %.6f, %.6f) | Equality Expected", pcMsg, v1.d[0], v1.d[1], v1.d[2], v2.d[0], v2.d[1], v2.d[2]);
         return true;
     }
@@ -403,8 +405,8 @@ bool pl_test_expect_vec3_equal(plVec3 v1, plVec3 v2, const char* pcMsg){
     gptTestContext->ptCurrentTest->bFailureOccured = true;
     return false;
 }
-bool pl_test_expect_vec4_equal(plVec4 v1, plVec4 v2, const char* pcMsg){
-    if(v1.d[0] == v2.d[0] && v1.d[1] == v2.d[1] && v1.d[2] == v2.d[2] && v1.d[3] == v2.d[3]){
+bool pl_test_expect_vec4_near_equal(plVec4 v1, plVec4 v2, float fError, const char* pcMsg){
+    if(pl_float_near_equal(v1.d[0], v2.d[0], fError) && pl_float_near_equal(v1.d[1], v2.d[1], fError) && pl_float_near_equal(v1.d[2], v2.d[2], fError) && pl_float_near_equal(v1.d[3], v2.d[3], fError)){
         pl__test_print_green("(%.6f, %.6f, %.6f, %.6f) equals (%.6f, %.6f, %.6f, %.6f) | Equality Expected", pcMsg, v1.d[0], v1.d[1], v1.d[2], v1.d[3], v2.d[0], v2.d[1], v2.d[2], v2.d[3]);
         return true;
     }
@@ -413,10 +415,10 @@ bool pl_test_expect_vec4_equal(plVec4 v1, plVec4 v2, const char* pcMsg){
     gptTestContext->ptCurrentTest->bFailureOccured = true;
     return false;
 }
-bool pl_test_expect_mat4_equal(plMat4 m1, plMat4 m2, const char* pcMsg){
+bool pl_test_expect_mat4_near_equal(plMat4 m1, plMat4 m2, float fError, const char* pcMsg){
     bool matrix_are_equals = true;
     for(int i = 0; i < 16; i++){
-        if(m1.d[i] != m2.d[i]){
+        if(!pl_float_near_equal(m1.d[i], m2.d[i], fError)){
             matrix_are_equals = false;
             break;
         }
@@ -436,8 +438,8 @@ bool pl_test_expect_mat4_equal(plMat4 m1, plMat4 m2, const char* pcMsg){
     gptTestContext->ptCurrentTest->bFailureOccured = true;
     return false;
 }
-bool pl_test_expect_rect_equal(plRect r1, plRect r2, const char* pcMsg){
-    if(r1.tMin.d[0] == r2.tMin.d[0] && r1.tMin.d[1] == r2.tMin.d[1] && r1.tMax.d[0] == r2.tMax.d[0] && r1.tMax.d[1] == r2.tMax.d[1]){
+bool pl_test_expect_rect_near_equal(plRect r1, plRect r2, float fError, const char* pcMsg){
+    if(pl_float_near_equal(r1.tMin.d[0], r2.tMin.d[0], fError) && pl_float_near_equal(r1.tMin.d[1], r2.tMin.d[1], fError) && pl_float_near_equal(r1.tMax.d[0], r2.tMax.d[0], fError) && pl_float_near_equal(r1.tMax.d[1], r2.tMax.d[1], fError)){
         pl__test_print_green("((%.6f, %.6f), (%.6f, %.6f)) equals ((%.6f, %.6f), (%.6f, %.6f)) | Equality Expected", pcMsg, r1.tMin.d[0], r1.tMin.d[1], r1.tMax.d[0], r1.tMax.d[1], r2.tMin.d[0], r2.tMin.d[1], r2.tMax.d[0], r2.tMax.d[1]);
         return true;
     }

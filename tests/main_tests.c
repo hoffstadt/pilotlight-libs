@@ -1,5 +1,5 @@
-#include "pl_json_tests.h"
 #include "pl_math_tests.h"
+#include "pl_json_tests.h"
 #include "pl_ds_tests.h"
 
 int main()
@@ -13,7 +13,7 @@ int main()
     pl_test_register_test(json_test_0, NULL);
     
     // math tests
-    pl_test_register_test(math_test_0, NULL);
+    pl_test_register_test(math_main_tests, NULL);
 
     if(!pl_test_run())
     {

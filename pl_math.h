@@ -42,6 +42,7 @@ Index of this file:
 
 // Check(Quattro) to use SSE variable __m128 inside the structs, we need to include this library
 //          └----> To Hoffstadt: check where you want to put this include, since you've put them inside the implementation
+// Check(Quattro) we need to check if the operating system supports SSE operations! (with the functions used below, we need SSE4.1, because of _mm_dp_ps)
 #include <smmintrin.h>
 // Check(Quattro) while using other math libraries, I've found out that having vectors containings float is good, but there are cases which the compiler bothers us, like
 // for(int i = 0; i < 10; i++) { plVec2 a = {i, i * 2}; }
@@ -59,7 +60,7 @@ struct plVec2 {
 }
 */
 // but maybe we could avoid this by using `pl_create_vec2` (?), in my opinion this seems a slow way of doing something simple
-// -Quattro 2024/01/23
+// -Quattro, 2024/01/23
 
 //-----------------------------------------------------------------------------
 // [SECTION] forward declarations & basic types
