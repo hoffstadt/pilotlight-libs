@@ -29,6 +29,7 @@ Index of this file:
 // [SECTION] matrix ops
 // [SECTION] rect ops
 // [SECTION] implementations
+// [SECTION] c++ operator overloading
 */
 
 //-----------------------------------------------------------------------------
@@ -42,6 +43,23 @@ Index of this file:
 // Check(Quattro) to use SSE variable __m128 inside the structs, we need to include this library
 //          └----> To Hoffstadt: check where you want to put this include, since you've put them inside the implementation
 #include <smmintrin.h>
+// Check(Quattro) while using other math libraries, I've found out that having vectors containings float is good, but there are cases which the compiler bothers us, like
+// for(int i = 0; i < 10; i++) { plVec2 a = {i, i * 2}; }
+// c++ wants an explicit cast from int to float, which we're not giving him, so it won't compile.
+// this happens with every type other than float, like u8, s64, double, etc.
+// to fix this, we should put the next piece of code on every struct
+/*
+struct plVec2 {
+    // what's inside the vec2 here, like `float x; float y;`, etc.
+    plVec2() = default;
+    template <typename A, typename B> plVec2(A a, B b){
+        this->x = (float)a;
+        this->y = (float)b;
+    }
+}
+*/
+// but maybe we could avoid this by using `pl_create_vec2` (?), in my opinion this seems a slow way of doing something simple
+// -Quattro 2024/01/23
 
 //-----------------------------------------------------------------------------
 // [SECTION] forward declarations & basic types
@@ -87,6 +105,12 @@ typedef union _plVec2
     struct { float r, g; };
     struct { float u, v; };
     float d[2];
+    #ifdef __cplusplus
+        inline float operator [] (int idx) {
+            // assert 0 <= idx <= 1 (?)
+            return this->d[idx];
+        }
+    #endif
 } plVec2;
 #endif // PL_MATH_VEC2_DEFINED
 
@@ -102,6 +126,12 @@ typedef union _plVec3
     struct { float ignore4_; plVec2 gb; };
     struct { float ignore5_; plVec2 v__; };
     float d[3];
+    #ifdef __cplusplus
+        inline float operator [] (int idx) {
+            // assert 0 <= idx <= 2 (?)
+            return this->d[idx];
+        }
+    #endif
 } plVec3;
 
 typedef union _plVec4
@@ -143,6 +173,12 @@ typedef union _plVec4
     };
     __m128 sse;
     float d[4];
+    #ifdef __cplusplus
+        inline float operator [] (int idx) {
+            // assert 0 <= idx <= 3 (?)
+            return this->d[idx];
+        }
+    #endif
 } plVec4;
 
 typedef union _plMat4
@@ -168,6 +204,13 @@ typedef union _plMat4
     };
     __m128 sse_col[4];
     float d[16];
+    #ifdef __cplusplus
+        inline plVec4 operator [] (int idx) {
+            // Check(Quattro) at the moment we have that doing plMat4[2][1] doesn't mean plMat4[row][col], but plMat4[col][row]
+            // assert 0 <= idx <= 3 (?)
+            return this->col[idx];
+        }
+    #endif
 } plMat4;
 
 typedef struct _plRect
@@ -621,5 +664,75 @@ pl_mat4t_invert(const plMat4* ptMat)
     tResult.x44 = 1.0f;
     return tResult;
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] c++ operator overloading
+//-----------------------------------------------------------------------------
+// Check(Quattro) all this section is untested!
+#ifdef __cplusplus
+inline plVec2 operator + (plVec2 tVec1, plVec2 tVec2) { return pl_add_vec2(tVec1, tVec2); }
+inline plVec3 operator + (plVec3 tVec1, plVec3 tVec3) { return pl_add_vec3(tVec1, tVec2); }
+inline plVec4 operator + (plVec4 tVec1, plVec4 tVec3) { return pl_add_vec4(tVec1, tVec2); }
+
+inline plVec2 operator - (plVec2 tVec1, plVec2 tVec2) { return pl_sub_vec2(tVec1, tVec2); }
+inline plVec3 operator - (plVec3 tVec1, plVec3 tVec2) { return pl_sub_vec3(tVec1, tVec2); }
+inline plVec4 operator - (plVec4 tVec1, plVec4 tVec2) { return pl_sub_vec4(tVec1, tVec2); }
+inline plVec2 operator - (plVec2 tVec)                { return pl_create_vec2(-tVec.x, -tVec.y); }
+inline plVec3 operator - (plVec3 tVec)                { return pl_create_vec3(-tVec.x, -tVec.y, -tVec.z); }
+inline plVec2 operator - (plVec2 tVec)                { plVec4 res;  res.sse = _mm_sub_ps(_mm_set1_ps(0), tVec.sse);  return res;}
+
+inline plVec2 operator * (plVec2 tVec1, plVec2 tVec2) { return pl_mul_vec2(tVec1, tVec2); }
+inline plVec3 operator * (plVec3 tVec1, plVec3 tVec2) { return pl_mul_vec3(tVec1, tVec2); }
+inline plVec4 operator * (plVec4 tVec1, plVec4 tVec2) { return pl_mul_vec4(tVec1, tVec2); }
+inline plVec2 operator * (plVec2 tVec, float fValue)  { return pl_mul_vec2_scalarf(tVec, fValue); }
+inline plVec3 operator * (plVec3 tVec, float fValue)  { return pl_mul_vec3_scalarf(tVec, fValue); }
+inline plVec4 operator * (plVec4 tVec, float fValue)  { return pl_mul_vec4_scalarf(tVec, fValue); }
+inline plVec2 operator * (float fValue, plVec2 tVec)  { return pl_mul_vec2_scalarf(tVec, fValue); }
+inline plVec3 operator * (float fValue, plVec3 tVec)  { return pl_mul_vec3_scalarf(tVec, fValue); }
+inline plVec4 operator * (float fValue, plVec4 tVec)  { return pl_mul_vec4_scalarf(tVec, fValue); }
+
+inline plVec2 operator / (plVec2 tVec1, plVec2 tVec2) { return pl_div_vec2(tVec1, tVec2); }
+inline plVec3 operator / (plVec3 tVec1, plVec3 tVec2) { return pl_div_vec3(tVec1, tVec2); }
+inline plVec4 operator / (plVec4 tVec1, plVec4 tVec2) { return pl_div_vec4(tVec1, tVec2); }
+inline plVec2 operator / (plVec2 tVec, float fValue)  { return pl_div_vec2_scalarf(tVec, fValue); }
+inline plVec3 operator / (plVec3 tVec, float fValue)  { return pl_div_vec3_scalarf(tVec, fValue); }
+inline plVec4 operator / (plVec4 tVec, float fValue)  { return pl_div_vec4_scalarf(tVec, fValue); }
+inline plVec2 operator / (float fValue, plVec2 tVec)  { return pl_div_scalarf_vec2(tVec, fValue); }
+inline plVec3 operator / (float fValue, plVec3 tVec)  { return pl_div_scalarf_vec3(tVec, fValue); }
+inline plVec4 operator / (float fValue, plVec4 tVec)  { return pl_div_scalarf_vec4(tVec, fValue); }
+
+inline plVec2 operator += (plVec2 &tVec1, plVec2 &tVec2) { a = a + b;  return a; }
+inline plVec3 operator += (plVec3 &tVec1, plVec3 &tVec2) { a = a + b;  return a; }
+inline plVec4 operator += (plVec4 &tVec1, plVec4 &tVec2) { a = a + b;  return a; }
+
+inline plVec2 operator -= (plVec2 &tVec1, plVec2 &tVec2) { a = a - b;  return a; }
+inline plVec3 operator -= (plVec3 &tVec1, plVec3 &tVec2) { a = a - b;  return a; }
+inline plVec4 operator -= (plVec4 &tVec1, plVec4 &tVec2) { a = a - b;  return a; }
+
+inline plVec2 operator *= (plVec2 &tVec1, plVec2 &tVec2) { a = a * b;  return a; }
+inline plVec3 operator *= (plVec3 &tVec1, plVec3 &tVec2) { a = a * b;  return a; }
+inline plVec4 operator *= (plVec4 &tVec1, plVec4 &tVec2) { a = a * b;  return a; }
+
+inline plVec2 operator *= (plVec2 &tVec1, plVec2 &tVec2) { a = a * b;  return a; }
+inline plVec3 operator *= (plVec3 &tVec1, plVec3 &tVec2) { a = a * b;  return a; }
+inline plVec4 operator *= (plVec4 &tVec1, plVec4 &tVec2) { a = a * b;  return a; }
+inline plVec2 operator *= (plVec2 &tVec, float fValue)   { a = a * b;  return a; }
+inline plVec3 operator *= (plVec3 &tVec, float fValue)   { a = a * b;  return a; }
+inline plVec4 operator *= (plVec4 &tVec, float fValue)   { a = a * b;  return a; }
+
+inline plVec2 operator /= (plVec2 &tVec1, plVec2 &tVec2) { a = a / b;  return a; }
+inline plVec3 operator /= (plVec3 &tVec1, plVec3 &tVec2) { a = a / b;  return a; }
+inline plVec4 operator /= (plVec4 &tVec1, plVec4 &tVec2) { a = a / b;  return a; }
+inline plVec2 operator /= (plVec2 &tVec, float fValue)   { a = a / b;  return a; }
+inline plVec3 operator /= (plVec3 &tVec, float fValue)   { a = a / b;  return a; }
+inline plVec4 operator /= (plVec4 &tVec, float fValue)   { a = a / b;  return a; }
+
+inline plMat4 operator * (float fLeft, const plMat4* ptRight)          { return pl_mul_scalarf_mat4(fLeft, ptRight); }
+inline plVec3 operator * (const plMat4* ptLeft, plVec3 tRight)         { return pl_mul_mat4_vec3(ptLeft, tRight); }
+inline plVec4 operator * (const plMat4* ptLeft, plVec4 tRight)         { return pl_mul_mat4_vec4(ptLeft, tRight); }
+inline plMat4 operator * (const plMat4* ptLeft, const plMat4* ptRight) { return pl_mul_mat4(ptLeft, ptRight); }
+// Check(Quattro) maybe we could add some rects operator overloading, but for now we let this empty
+
+#endif  // c++
 
 #endif // PL_MATH_INCLUDE_FUNCTIONS
