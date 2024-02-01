@@ -92,6 +92,8 @@ typedef struct _plRect plRect;
 #define PL_2_SQRTPI 1.12837916f // 2/sqrt(pi)
 #define PL_SQRT2    1.41421356f // sqrt(2)
 #define PL_SQRT1_2  0.70710678f // 1/sqrt(2)
+#define PL_SQRT3    1.73205807f // sqrt(3)
+#define PL_SQRT1_3  0.57735027f // 1/sqrt(3)
 #define PL_PI_D     3.1415926535897932 // pi
 
 //-----------------------------------------------------------------------------
@@ -300,9 +302,9 @@ static inline float  pl_length_vec3      (plVec3 tVec)                          
 static inline float  pl_length_vec4      (plVec4 tVec)                             { return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(tVec.sse, tVec.sse, 0b11110001))); }
 static inline plVec2 pl_floor_vec2       (plVec2 tVec)                             { return pl_create_vec2(floorf(tVec.x), floorf(tVec.y));}
 static inline plVec3 pl_floor_vec3       (plVec3 tVec)                             { return pl_create_vec3(floorf(tVec.x), floorf(tVec.y), floorf(tVec.z));}
-static inline plVec4 pl_floor_vec4       (plVec4 tVec)                             { plVec4 res;  tVec.sse = _mm_floor_ps(tVec.sse); return res;}
+static inline plVec4 pl_floor_vec4       (plVec4 tVec)                             { plVec4 res;  res.sse = _mm_floor_ps(tVec.sse); return res;}
 static inline plVec2 pl_clamp_vec2       (plVec2 tMin, plVec2 tValue, plVec2 tMax) { return pl_create_vec2(pl_clampf(tMin.x, tValue.x, tMax.x), pl_clampf(tMin.y, tValue.y, tMax.y));}
-static inline plVec3 pl_clamp_vec3       (plVec3 tMin, plVec3 tValue, plVec3 tMax) { return pl_create_vec3(pl_clampf(tMin.x, tValue.x, tMax.x), pl_clampf(tMin.y, tValue.y, tMax.y), pl_clampf(tMax.z, tValue.z, tMax.z));}
+static inline plVec3 pl_clamp_vec3       (plVec3 tMin, plVec3 tValue, plVec3 tMax) { return pl_create_vec3(pl_clampf(tMin.x, tValue.x, tMax.x), pl_clampf(tMin.y, tValue.y, tMax.y), pl_clampf(tMin.z, tValue.z, tMax.z));}
 static inline plVec4 pl_clamp_vec4       (plVec4 tMin, plVec4 tValue, plVec4 tMax) { plVec4 res;  res.sse = _mm_min_ps(_mm_max_ps(tValue.sse, tMin.sse), tMax.sse);  return res;}
 static inline plVec2 pl_min_vec2        (plVec2 tValue0, plVec2 tValue1)           { return pl_create_vec2(pl_minf(tValue0.x, tValue1.x), pl_minf(tValue0.y, tValue1.y));}
 static inline plVec3 pl_min_vec3        (plVec3 tValue0, plVec3 tValue1)           { return pl_create_vec3(pl_minf(tValue0.x, tValue1.x), pl_minf(tValue0.y, tValue1.y), pl_minf(tValue0.z, tValue1.z));}
