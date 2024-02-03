@@ -13,8 +13,8 @@
 */
 
 // library version
-#define PL_MATH_VERSION    "0.6.0"
-#define PL_MATH_VERSION_NUM 00600
+#define PL_MATH_VERSION    "0.6.1"
+#define PL_MATH_VERSION_NUM 00601
 
 /*
 Index of this file:
@@ -49,6 +49,7 @@ typedef union  _plVec3 plVec3;
 typedef union  _plVec4 plVec4;
 typedef union  _plMat4 plMat4;
 typedef struct _plRect plRect;
+typedef struct _plAABB plAABB;
 
 //-----------------------------------------------------------------------------
 // [SECTION] defines
@@ -169,6 +170,12 @@ typedef struct _plRect
     plVec2 tMin;
     plVec2 tMax;
 } plRect;
+
+typedef struct _plAABB
+{
+    plVec3 tMin;
+    plVec3 tMax;
+} plAABB;
 
 #endif // PL_MATH_INC
 
