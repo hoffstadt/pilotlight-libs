@@ -277,6 +277,10 @@ void math_test_vec3() {
         pl_test_expect_float_near_equal(pl_dot_vec3(pl_create_vec3(1.2f, 1, 2.3f), pl_create_vec3(1.53f, -1, 1.65f)), 4.63f, 0.01f, NULL);
     }
     {
+        pl_test_expect_vec3_near_equal(pl_cross_vec3(pl_create_vec3(1.42f, 0.24f, -2.1f), pl_create_vec3(5.2f, 0.12f, 0.54f)), pl_create_vec3(0.38f, -11.68f, -1.07f), 0.01f, NULL);
+        pl_test_expect_vec3_near_equal(pl_cross_vec3(pl_create_vec3(1, 0, 0), pl_create_vec3(0, 1, 0)), pl_create_vec3(0, 0, 1), 0.01f, NULL);
+    }
+    {
         pl_test_expect_vec3_near_equal(pl_add_vec3(pl_create_vec3(3.82f, 1.3f, 0.2f), pl_create_vec3(-6.3f, -10.4f, 2.0f)), pl_create_vec3(-2.48f, -9.1f, 2.2f), 0.01f, NULL);
         pl_test_expect_vec3_near_equal(pl_add_vec3(pl_create_vec3(-15.12f, 0, -5), pl_create_vec3(15.12f, 3, 1.2f)), pl_create_vec3(0, 3, -3.8f), 0.01f, NULL);
     }
@@ -379,13 +383,157 @@ void math_test_vec4() {
         pl_test_expect_float_near_equal(pl_length_vec4(pl_norm_vec4(pl_create_vec4(3.82f, 1.3f, 4.32f, 59348))), 1, 0.01f, NULL);
     }
 }
-void math_test_mat4() {}
-void math_test_rect() {}
+
+void math_test_mat4() {
+    plMat4 m1 = {-0.2f, 5.23f, 0.12f, 5.3f, 1.54f, -2.3f, 15.3f, 0, 1.54f, 5.3f, 0.2f, 5, -5.4f, -2.1f, 3.4f, 23};
+    plMat4 m2 = {1.53f, 0.1f, -4.3f, -8.93f, 2, 0.8f, -4.9f, 0.4f, 2.4f, 0.3f, -5.2f, 1, 9.2f, 0.32f, -8, 0.01f};
+    plMat4 d  = {4, 0, 0, 0, 0, 2, 0, 0, 0, 0, -0.2f, 0, 0, 0, 0, 1.8f};
+    plMat4 i  = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+    {
+        pl_test_expect_float_near_equal(pl_mat4_get(&m1, 0, 0), -0.2f, 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&m1, 3, 3), 23, 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&m1, 2, 3), 3.4f, 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&m2, 2, 1), -4.9f, 0.01f, NULL);
+    }
+    {
+        pl_mat4_set(&m1, 0, 0, 4.2f);
+        pl_test_expect_float_near_equal(pl_mat4_get(&m1, 0, 0), 4.2f, 0.01f, NULL);
+        pl_mat4_set(&m1, 0, 0, -0.2f);
+        pl_mat4_set(&d, 2, 2, 3);
+        pl_test_expect_float_near_equal(pl_mat4_get(&d, 2, 2), 3, 0.01f, NULL);
+        pl_mat4_set(&d, 2, 2, -0.2f);
+    }
+    {
+        pl_test_expect_mat4_near_equal(i, pl_identity_mat4(), 0.01f, NULL);
+    }
+    {
+        pl_test_expect_mat4_near_equal(i, pl_mat4_transpose(&i), 0.01f, NULL);
+        pl_test_expect_mat4_near_equal(d, pl_mat4_transpose(&d), 0.01f, NULL);
+        plMat4 m1t = {-0.2f, 1.54f, 1.54f, -5.4f, 5.23f, -2.3f, 5.3f, -2.1f, 0.12f, 15.3f, 0.2f, 3.4f, 5.3f, 0, 5, 23};
+        pl_test_expect_mat4_near_equal(m1t, pl_mat4_transpose(&m1), 0.01f, NULL);
+    }
+    {
+        pl_test_expect_mat4_near_equal(i, pl_mat4_invert(&i), 0.01f, NULL);
+        plMat4 mi = {-0.61f, -0.005f, 0.608f, 0.009f, 0.299f, 0.008f, -0.12f, -0.04f, 0.107f, 0.07f, -0.08f, -0.007f, -0.13f, -0.01f, 0.14f, 0.04f};
+        pl_test_expect_mat4_near_equal(mi, pl_mat4_invert(&m1), 0.01f, NULL);
+        pl_test_expect_mat4_near_equal(pl_create_mat4_diag(0.25f, 0.5f, -5, 0.55f), pl_mat4_invert(&d), 0.01f, NULL);
+    }
+    {
+        pl_test_expect_mat4_near_equal(pl_mul_scalarf_mat4(4, &i), pl_create_mat4_diag(4, 4, 4, 4), 0.01f, NULL);
+        pl_test_expect_mat4_near_equal(pl_mul_scalarf_mat4(0, &m2), pl_create_mat4_diag(0, 0, 0, 0), 0.01f, NULL);
+        pl_test_expect_mat4_near_equal(pl_mul_scalarf_mat4(1, &m2), m2, 0.01f, NULL);
+    }
+    {
+        plVec3 v = {0, 1, -2};
+        plVec3 res = {-6.94f, -15, 18.3f};
+        pl_test_expect_vec3_near_equal(pl_mul_mat4_vec3(&m1, v), res, 0.01f, NULL);
+    }
+    {
+        plVec4 v = {0, 1, -2, 4};
+        plVec4 res = {-23.14f, -21.3f, 28.5f, 82};
+        pl_test_expect_vec4_near_equal(pl_mul_mat4_vec4(&m1, v), res, 0.01f, NULL);
+    }
+    {
+        plMat4 res = {41.45f, 3.73f, -29.5f, -218.78f, -8.87f, -18.19f, 12.86f, -4.7f, -13.426f, -17.798f, 7.24f, 9.72f, -13.72f, 4.96f, 4.43f, 8.99f};
+        pl_test_expect_mat4_near_equal(pl_mul_mat4(&m1, &m2), res, 0.01f, NULL);
+        pl_test_expect_mat4_near_equal(pl_mul_mat4(&m1, &i), m1, 0.01f, NULL);
+        plMat4 m = {-0.2f, 5.23f, 0.12f, 5.3f, 1.54f, -2.3f, 15.3f, 0, 1.54f, 5.3f, 0.2f, 5, -5.4f, -2.1f, 3.4f, 23};
+        plMat4 inv = pl_mat4_invert(&m);
+        pl_test_expect_mat4_near_equal(pl_mul_mat4(&m1, &inv), i, 0.01f, NULL);
+    }
+    {
+        plMat4 t1 = pl_mat4_translate_xyz(0, 1, -2);
+        plMat4 i2 = i;
+        pl_mat4_set(&i2, 0, 3, 0);
+        pl_mat4_set(&i2, 1, 3, 1);
+        pl_mat4_set(&i2, 2, 3, -2);
+        pl_test_expect_mat4_near_equal(i2, t1, 0.01f, NULL);
+        plMat4 t2 = pl_mat4_translate_vec3(pl_create_vec3(0, 1, -2));
+        pl_test_expect_mat4_near_equal(i2, t2, 0.01f, NULL);
+    }
+    {
+        float angle = PL_PI / 2;
+        plMat4 rx = pl_mat4_rotate_vec3(angle, pl_create_vec3(1, 0, 0));
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx, 1, 1),  cosf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx, 1, 2), -sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx, 2, 1),  sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx, 2, 2),  cosf(angle), 0.01f, NULL);
+        
+        plMat4 ry = pl_mat4_rotate_vec3(angle, pl_create_vec3(0, 1, 0));
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry, 0, 0),  cosf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry, 0, 2),  sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry, 2, 0), -sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry, 2, 2),  cosf(angle), 0.01f, NULL);
+        
+        plMat4 rz = pl_mat4_rotate_vec3(angle, pl_create_vec3(0, 0, 1));
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz, 0, 0),  cosf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz, 0, 1), -sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz, 1, 0),  sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz, 1, 1),  cosf(angle), 0.01f, NULL);
+        
+        plMat4 rx2 = pl_mat4_rotate_xyz(angle, 1, 0, 0);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx2, 1, 1),  cosf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx2, 1, 2), -sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx2, 2, 1),  sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rx2, 2, 2),  cosf(angle), 0.01f, NULL);
+        
+        plMat4 ry2 = pl_mat4_rotate_xyz(angle, 0, 1, 0);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry2, 0, 0),  cosf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry2, 0, 2),  sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry2, 2, 0), -sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&ry2, 2, 2),  cosf(angle), 0.01f, NULL);
+        
+        plMat4 rz2 = pl_mat4_rotate_xyz(angle, 0, 0, 1);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz2, 0, 0),  cosf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz2, 0, 1), -sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz2, 1, 0),  sinf(angle), 0.01f, NULL);
+        pl_test_expect_float_near_equal(pl_mat4_get(&rz2, 1, 1),  cosf(angle), 0.01f, NULL);
+        // Note(Quattro) it's hard to make a rotation around a complex axis (1, 1, 1) for example, because matrices doesn't have the commutative property
+        //               so doing rx * ry != ry * rx
+    }
+    {
+        plMat4 s1 = pl_mat4_scale_xyz(1, 1, 1);
+        pl_test_expect_mat4_near_equal(i, s1, 0.01f, NULL);
+        plMat4 s2 = pl_mat4_scale_xyz(4, 4, 4);
+        plMat4 t = pl_mul_scalarf_mat4(4, &i);
+        pl_mat4_set(&t, 3, 3, 1);
+        pl_test_expect_mat4_near_equal(t, s2, 0.01f, NULL);
+        plMat4 s3 = pl_mat4_scale_vec3(pl_create_vec3(8, 8, 8));
+        plMat4 t2 = pl_mul_scalarf_mat4(8, &i);
+        pl_mat4_set(&t2, 3, 3, 1);
+        pl_test_expect_mat4_near_equal(t2, s3, 0.01f, NULL);
+    }
+    {
+        // Check(Quattro) i have no idea how this function works, are there quaternions inside? But there aren't quaternions in this library...
+        //                and there aren't even sin or cos inside
+        // pl_rotation_translation_scale();
+    }
+    {
+        // Note(Quattro) if algebra is not a joke, let M be an orthogonal matrix, then M^{-1} = M^T
+        plMat4 M = pl_mat4_rotate_vec3(PL_PI / 2, pl_create_vec3(1, 0, 0));  // apparently an orthogonal matrix
+        plMat4 Mt = pl_mat4_transpose(&M);
+        pl_test_expect_mat4_near_equal(pl_mul_mat4(&M, &Mt), i, 0.01f, NULL);  // Woo!
+        // this time using custom functions
+        plMat4 Mi = pl_mat4t_invert(&M);
+        pl_test_expect_mat4_near_equal(pl_mul_mat4t(&M, &Mi), i, 0.01f, NULL);
+    }
+}
+void math_test_rect() {
+    // Todo(Quattro)
+}
 #ifdef __cplusplus
-    void math_test_op_overloading_vec2() {}
-    void math_test_op_overloading_vec3() {}
-    void math_test_op_overloading_vec4() {}
-    void math_test_op_overloading_mat4() {}
+    void math_test_op_overloading_vec2() {
+        // Todo(Quattro)
+    }
+    void math_test_op_overloading_vec3() {
+        // Todo(Quattro)
+    }
+    void math_test_op_overloading_vec4() {
+        // Todo(Quattro)
+    }
+    void math_test_op_overloading_mat4() {
+        // Todo(Quattro)
+    }
 #endif  // c++
 
 
@@ -406,4 +554,3 @@ static void math_main_tests(void* pData){
         math_test_op_overloading_mat4();
     #endif
 }
-

@@ -458,9 +458,9 @@ pl_mul_mat4(const plMat4* ptLeft, const plMat4* ptRight)
     
     plMat4 res;
     res.sse_col[0] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[0], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[0], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[0], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[0], 0b11111000)));
-    res.sse_col[0] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[1], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[1], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[1], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[1], 0b11111000)));
-    res.sse_col[0] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[2], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[2], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[2], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[2], 0b11111000)));
-    res.sse_col[0] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[3], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[3], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[3], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[3], 0b11111000)));
+    res.sse_col[1] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[1], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[1], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[1], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[1], 0b11111000)));
+    res.sse_col[2] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[2], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[2], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[2], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[2], 0b11111000)));
+    res.sse_col[3] = _mm_or_ps(_mm_or_ps(_mm_dp_ps(temp.sse_col[0], ptRight->sse_col[3], 0b11110001), _mm_dp_ps(temp.sse_col[1], ptRight->sse_col[3], 0b11110010)), _mm_or_ps(_mm_dp_ps(temp.sse_col[2], ptRight->sse_col[3], 0b11110100), _mm_dp_ps(temp.sse_col[3], ptRight->sse_col[3], 0b11111000)));
     return res;
 }
 
