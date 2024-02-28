@@ -13,8 +13,8 @@
 */
 
 // library version
-#define PL_MATH_VERSION    "0.6.1"
-#define PL_MATH_VERSION_NUM 00601
+#define PL_MATH_VERSION    "0.6.3"
+#define PL_MATH_VERSION_NUM 00603
 
 /*
 Index of this file:
@@ -27,6 +27,7 @@ Index of this file:
 // [SECTION] general math
 // [SECTION] vector ops
 // [SECTION] matrix ops
+// [SECTION] quaternion ops
 // [SECTION] rect ops
 // [SECTION] implementations
 */
@@ -189,6 +190,7 @@ typedef struct _plAABB
 #include <math.h>
 #include <stdbool.h> // bool
 #include <stdint.h>  // uint*_t
+#include <assert.h>
 
 //-----------------------------------------------------------------------------
 // [SECTION] helpers
@@ -300,9 +302,9 @@ static inline plVec2 pl_div_scalarf_vec2(float fValue, plVec2 tVec)  { return pl
 static inline plVec3 pl_div_scalarf_vec3(float fValue, plVec3 tVec)  { return pl_create_vec3(fValue / tVec.x, fValue / tVec.y, fValue / tVec.z); }
 static inline plVec4 pl_div_scalarf_vec4(float fValue, plVec4 tVec)  { return pl_create_vec4(fValue / tVec.x, fValue / tVec.y, fValue / tVec.z, fValue / tVec.w); }
 
-static inline plVec2 pl_norm_vec2       (plVec2 tVec)                { return pl_div_vec2_scalarf(tVec, pl_length_vec2(tVec)); }
-static inline plVec3 pl_norm_vec3       (plVec3 tVec)                { return pl_div_vec3_scalarf(tVec, pl_length_vec3(tVec)); }
-static inline plVec4 pl_norm_vec4       (plVec4 tVec)                { return pl_div_vec4_scalarf(tVec, pl_length_vec4(tVec)); }
+static inline plVec2 pl_norm_vec2       (plVec2 tVec)                { float fLength = pl_length_vec2(tVec); if(fLength > 0) fLength = 1.0f / fLength; return pl_mul_vec2_scalarf(tVec, fLength); }
+static inline plVec3 pl_norm_vec3       (plVec3 tVec)                { float fLength = pl_length_vec3(tVec); if(fLength > 0) fLength = 1.0f / fLength; return pl_mul_vec3_scalarf(tVec, fLength); }
+static inline plVec4 pl_norm_vec4       (plVec4 tVec)                { float fLength = pl_length_vec4(tVec); if(fLength > 0) fLength = 1.0f / fLength; return pl_mul_vec4_scalarf(tVec, fLength); }
 
 //-----------------------------------------------------------------------------
 // [SECTION] matrix ops
@@ -331,6 +333,17 @@ static inline plMat4 pl_rotation_translation_scale(plVec4 tQ, plVec3 tV, plVec3 
 // transforms (optimized for orthogonal matrices)
 static inline plMat4 pl_mat4t_invert              (const plMat4* ptMat);
 static inline plMat4 pl_mul_mat4t                 (const plMat4* ptLeft, const plMat4* ptRight);
+
+//-----------------------------------------------------------------------------
+// [SECTION] quaternion ops
+//-----------------------------------------------------------------------------
+
+static inline plVec4 pl_mul_quat                 (plVec4 tQ1, plVec4 tQ2)                      { return pl_create_vec4(tQ1.w * tQ2.x + tQ1.x * tQ2.w + tQ1.y * tQ2.z - tQ1.z * tQ2.y, tQ1.w * tQ2.y - tQ1.x * tQ2.z + tQ1.y * tQ2.w + tQ1.z * tQ2.x, tQ1.w * tQ2.z + tQ1.x * tQ2.y - tQ1.y * tQ2.x + tQ1.z * tQ2.w, tQ1.w * tQ2.w - tQ1.x * tQ2.x - tQ1.y * tQ2.y - tQ1.z * tQ2.z);}
+static inline plVec4 pl_quat_rotation_normal     (float fAngle, float fX, float fY, float fZ)  { const float fSin2 = sinf(0.5f * fAngle); return pl_create_vec4(fSin2 * fX, fSin2 * fY, fSin2 * fZ, cosf(0.5f * fAngle));}
+static inline plVec4 pl_quat_rotation_normal_vec3(float fAngle, plVec3 tNormalAxis)            { return pl_quat_rotation_normal(fAngle, tNormalAxis.x, tNormalAxis.y, tNormalAxis.z);}
+static inline plVec4 pl_norm_quat                (plVec4 tQ)                                   { const plVec3 tNorm = pl_norm_vec3(tQ.xyz); return pl_create_vec4(tNorm.x, tNorm.y, tNorm.z, tQ.w);}
+static inline plVec4 pl_quat_slerp               (plVec4 tQ1, plVec4 tQ2, float fT);
+static inline void   pl_decompose_matrix         (const plMat4* ptM, plVec3* ptS, plVec4* ptQ, plVec3* ptT);
 
 //-----------------------------------------------------------------------------
 // [SECTION] rect ops
@@ -617,6 +630,157 @@ pl_mat4t_invert(const plMat4* ptMat)
     tResult.x34 = -pl_dot_vec3(tD, tS);
     tResult.x44 = 1.0f;
     return tResult;
+}
+
+static inline void
+pl_decompose_matrix(const plMat4* ptM, plVec3* ptS, plVec4* ptQ, plVec3* ptT)
+{
+    // method borrowed from blender source
+
+    // caller must ensure matrices aren't negative for valid results
+
+    *ptT = ptM->col[3].xyz;
+
+    ptS->x = pl_length_vec3(ptM->col[0].xyz);
+    ptS->y = pl_length_vec3(ptM->col[1].xyz);
+    ptS->z = pl_length_vec3(ptM->col[2].xyz);
+
+    // method outlined by Mike Day, ref: https://math.stackexchange.com/a/3183435/220949
+    // with an additional `sqrtf(..)` for higher precision result.
+
+    plMat4 tMat = {0};
+    tMat.col[0] = pl_norm_vec4(ptM->col[0]);
+    tMat.col[1] = pl_norm_vec4(ptM->col[1]);
+    tMat.col[2] = pl_norm_vec4(ptM->col[2]);
+
+    if (tMat.col[2].d[2] < 0.0f)
+    {
+        if (tMat.col[0].d[0] > tMat.col[1].d[1])
+        {
+            const float fTrace = 1.0f + tMat.col[0].d[0] - tMat.col[1].d[1] - tMat.col[2].d[2];
+            float fS = 2.0f * sqrtf(fTrace);
+            if (tMat.col[1].d[2] < tMat.col[2].d[1]) // ensure W is non-negative for a canonical result
+                fS = -fS;
+            ptQ->d[0] = 0.25f * fS;
+            fS = 1.0f / fS;
+            ptQ->d[3] = (tMat.col[1].d[2] - tMat.col[2].d[1]) * fS;
+            ptQ->d[1] = (tMat.col[0].d[1] + tMat.col[1].d[0]) * fS;
+            ptQ->d[2] = (tMat.col[2].d[0] + tMat.col[0].d[2]) * fS;
+            if ((fTrace == 1.0f) && (ptQ->d[3] == 0.0f && ptQ->d[1] == 0.0f && ptQ->d[2] == 0.0f)) // avoids the need to normalize the degenerate case
+                ptQ->d[0] = 1.0f;
+        }
+        else
+        {
+            const float fTrace = 1.0f - tMat.col[0].d[0] + tMat.col[1].d[1] - tMat.col[2].d[2];
+            float fS = 2.0f * sqrtf(fTrace);
+            if (tMat.col[2].d[0] < tMat.col[0].d[2]) // ensure W is non-negative for a canonical result
+                fS = -fS;
+            ptQ->d[1] = 0.25f * fS;
+            fS = 1.0f / fS;
+            ptQ->d[3] = (tMat.col[2].d[0] - tMat.col[0].d[2]) * fS;
+            ptQ->d[0] = (tMat.col[0].d[1] + tMat.col[1].d[0]) * fS;
+            ptQ->d[2] = (tMat.col[1].d[2] + tMat.col[2].d[1]) * fS;
+            if ((fTrace == 1.0f) && (ptQ->d[3] == 0.0f && ptQ->d[0] == 0.0f && ptQ->d[2] == 0.0f)) // avoids the need to normalize the degenerate case
+                ptQ->d[1] = 1.0f;
+        }
+    }
+    else
+    {
+        if (tMat.col[0].d[0] < -tMat.col[1].d[1])
+        {
+            const float fTrace = 1.0f - tMat.col[0].d[0] - tMat.col[1].d[1] + tMat.col[2].d[2];
+            float fS = 2.0f * sqrtf(fTrace);
+            if (tMat.col[0].d[1] < tMat.col[1].d[0]) // ensure W is non-negative for a canonical result
+                fS = -fS;
+            ptQ->d[2] = 0.25f * fS;
+            fS = 1.0f / fS;
+            ptQ->d[3] = (tMat.col[0].d[1] - tMat.col[1].d[0]) * fS;
+            ptQ->d[0] = (tMat.col[2].d[0] + tMat.col[0].d[2]) * fS;
+            ptQ->d[1] = (tMat.col[1].d[2] + tMat.col[2].d[1]) * fS;
+            if ((fTrace == 1.0f) && (ptQ->d[3] == 0.0f && ptQ->d[0] == 0.0f && ptQ->d[1] == 0.0f)) // avoids the need to normalize the degenerate case
+                ptQ->d[2] = 1.0f;
+        }
+        else
+        {
+            // note: a zero matrix will fall through to this block,
+            // needed so a zero scaled matrices to return a quaternion without rotation
+            const float fTrace = 1.0f + tMat.col[0].d[0] + tMat.col[1].d[1] + tMat.col[2].d[2];
+            float fS = 2.0f * sqrtf(fTrace);
+            ptQ->d[3] = 0.25f * fS;
+            fS = 1.0f / fS;
+            ptQ->d[0] = (tMat.col[1].d[2] - tMat.col[2].d[1]) * fS;
+            ptQ->d[1] = (tMat.col[2].d[0] - tMat.col[0].d[2]) * fS;
+            ptQ->d[2] = (tMat.col[0].d[1] - tMat.col[1].d[0]) * fS;
+            if ((fTrace == 1.0f) && (ptQ->d[0] == 0.0f && ptQ->d[1] == 0.0f && ptQ->d[2] == 0.0f)) // avoids the need to normalize the degenerate case
+                ptQ->d[3] = 1.0f;
+        }
+    }
+
+    assert(!(ptQ->d[3] < 0.0f));
+}
+
+static inline plVec4
+pl_quat_slerp(plVec4 tQ1, plVec4 tQ2, float fT)
+{
+
+	// from https://glmatrix.net/docs/quat.js.html
+	plVec4 tQn1 = pl_norm_vec4(tQ1);
+	plVec4 tQn2 = pl_norm_vec4(tQ2);
+
+	plVec4 tResult = {0};
+
+	float fAx = tQn1.x;
+	float fAy = tQn1.y;
+	float fAz = tQn1.z;
+	float fAw = tQn1.w;
+
+	float fBx = tQn2.x;
+	float fBy = tQn2.y;
+	float fBz = tQn2.z;
+	float fBw = tQn2.w;
+
+	float fOmega = 0.0f;
+	float fCosom = fAx * fBx + fAy * fBy + fAz * fBz + fAw * fBw;
+	float fSinom = 0.0f;
+	float fScale0 = 0.0f;
+	float fScale1 = 0.0f;
+
+	// adjust signs (if necessary)
+	if (fCosom < 0.0f) 
+	{
+		fCosom = -fCosom;
+		fBx = -fBx;
+		fBy = -fBy;
+		fBz = -fBz;
+		fBw = -fBw;
+	}
+
+	// calculate coefficients
+	if (1.0f - fCosom > 0.000001f)
+	{
+		// standard case (slerp)
+		fOmega = acosf(fCosom);
+		fSinom = sinf(fOmega);
+		fScale0 = sinf((1.0f - fT) * fOmega) / fSinom;
+		fScale1 = sinf(fT * fOmega) / fSinom;
+	}
+	else 
+	{
+		// "from" and "to" quaternions are very close
+		//  ... so we can do a linear interpolation
+		fScale0 = 1.0f - fT;
+		fScale1 = fT;
+	}
+
+	// calculate final values
+	tResult.d[0] = fScale0 * fAx + fScale1 * fBx;
+	tResult.d[1] = fScale0 * fAy + fScale1 * fBy;
+	tResult.d[2] = fScale0 * fAz + fScale1 * fBz;
+	tResult.d[3] = fScale0 * fAw + fScale1 * fBw;
+
+	tResult = pl_norm_vec4(tResult);
+
+	return tResult;
 }
 
 #endif // PL_MATH_INCLUDE_FUNCTIONS
